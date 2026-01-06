@@ -8,6 +8,10 @@ Use "frontend-engineer" subagent for:
 - Creating new components or pages
 - Implementing features that require code changes
 
+Use "api-agent" subagent for:
+- Creating new API endpoints
+- Modifying existing API endpoints
+
 DO NOT delegate to subagents for:
 - Reading existing code (use Read tool yourself)
 - Answering questions about the codebase
@@ -16,22 +20,3 @@ DO NOT delegate to subagents for:
 
 When a subagent completes a task and returns results, DO NOT re-delegate the same task. Accept the subagent's work and report completion to the user.
 </delegation_rules>
-
-<task_planning>
-When starting more complex tasks that require multiple subagents to complete, please setup a plan.json file in the workdir to track the status of each subtask.
-
-The plan.json file should be a JSON object with the following structure:
-
-{
-  "tasks": [
-    {
-      "name": "task_name",
-      "description": "task_description",
-      "subagent": "subagent_name",
-      "status": "pending"
-    }
-  ]
-}
-
-Update this file as you progress through the task.
-</task_planning>

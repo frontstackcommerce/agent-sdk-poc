@@ -15,6 +15,7 @@
   },
   "type": "module",
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.71.2"
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@modelcontextprotocol/sdk": "^1.25.1"
   }
 }

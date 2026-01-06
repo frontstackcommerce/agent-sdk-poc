@@ -1,22 +1,42 @@
-import { query, Options, SDKUserMessage, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, SDKMessage, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
 import fs from "node:fs";
+import fronticMcp from "./mcp/fronticMcp";
+import { FRONTIC_MCP_TOOLS } from "./mcp/fronticMcp";
+
+const AGENT_SDK_MCP_TOOLS = {
+  READ: "Read",
+  EDIT: "Edit",
+  GLOB: "Glob",
+  TASK: "Task",
+  WRITE: "Write",
+  ASK_USER_QUESTION: "AskUserQuestion",
+}
+
+interface UserQuestion {
+  question: string;
+  header: string;
+  options: {
+    label: string;
+    description: string;
+  }[];
+  multiSelect: boolean;
+}
 
 const AGENT_OPTIONS: Options = {
   systemPrompt:
     fs.readFileSync(path.join(import.meta.dirname, 'sub-agents', 'buddy.md'), 'utf8'),
-  tools: ["Read", "Edit", "Glob", "Task", "Write", "list_projects"],
-  allowedTools: ["Read", "Edit", "Glob", "Task", "Write", "list_projects"],
+  tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
+  allowedTools: [
+    // Built-in tools
+    ...Object.values(AGENT_SDK_MCP_TOOLS),
+    // Frontic MCP tools
+    ...Object.values(FRONTIC_MCP_TOOLS),
+  ],
   mcpServers: {
-    "frontic": {
-      "url": "https://mcp.frontstack.test",
-      "type": "http",
-      "headers": {
-        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjAxOjQ4OjI3OmI4OmJhOjVlOjFhOmNiOjk1OjAxOjRlOmI4OjM1OjkzOjJmOjFiIiwidHlwIjoiSldUIn0.eyJhdWQiOltdLCJhenAiOiJlZDNkY2QyZTQ1NGE0NzU4OTlmYjc3ZmFhNWE5OTliZSIsImVtYWlsIjoiZG9tQGZyb250c3RhY2suZGV2IiwiZXhwIjoxNzY3MjA0OTU5LCJmZWF0dXJlX2ZsYWdzIjp7ImludGVncmF0aW9uLWFrZW5lbyI6eyJ0IjoiYiIsInYiOnRydWV9LCJpbnRlZ3JhdGlvbi1jb21tZXJjZXRvb2xzIjp7InQiOiJiIiwidiI6dHJ1ZX0sInJlbGVhc2UiOnsidCI6ImIiLCJ2Ijp0cnVlfSwic3R1ZGlvIjp7InQiOiJiIiwidiI6dHJ1ZX19LCJpYXQiOjE3NjcxMTg1NTksImlzcyI6Imh0dHBzOi8vaWQuZnJvbnRsYWIuZGV2IiwianRpIjoiOWQwNTFhNjctOTUyMS00NGUxLThiYWYtZTNlMDA5MWYwNTVhIiwib3JnX2NvZGUiOiJvcmdfMTRjZDlmMTE1NjlhN2QiLCJvcmdfbmFtZSI6IlF1YW50dW0gVmVudHVyZXMiLCJwZXJtaXNzaW9ucyI6WyJwcm9qZWN0LXJlbGVhc2U6dXBzZXJ0Iiwic3RvcmFnZTpyZWFkIiwic3R1ZGlvOnJlYWQiLCJzdHVkaW86dXBzZXJ0IiwicHJvamVjdC1sb2NhbGU6cmVhZCIsInN0dWRpbzpkZWxldGUiLCJwcm9qZWN0LWZpZWxkOmRlbGV0ZSIsInByb2plY3QtZmllbGQ6cmVhZCIsInByb2plY3QtcmVsZWFzZTpyZWFkIiwiYmxvY2s6dXBzZXJ0IiwiaW50ZWdyYXRpb246dXBzZXJ0IiwicHJvamVjdDp1cHNlcnQiLCJ1c2VyOnVwc2VydCIsInByb2plY3QtZmllbGQ6dXBzZXJ0IiwicHJvamVjdC1kb21haW46dXBzZXJ0Iiwic3RvcmFnZTp1cHNlcnQiLCJpbnRlZ3JhdGlvbjpyZWFkIiwicHJvamVjdDpyZWFkIiwic2V0dGluZzpyZWFkIiwic3RvcmFnZTpicm93c2UiLCJzdG9yYWdlOmRlbGV0ZSIsInN5bmM6cmVhZCIsInVzZXI6cmVhZCIsInByb2plY3QtZG9tYWluOnJlYWQiLCJwcm9qZWN0LWRvbWFpbjpkZWxldGUiLCJibG9jazpyZWFkIiwicHJvamVjdC1sb2NhbGU6dXBzZXJ0Iiwic3luYzp1cHNlcnQiLCJibG9jazpkZWxldGUiLCJyb3V0ZXI6dXBzZXJ0Iiwicm91dGVyOnJlYWQiLCJyb3V0ZXI6ZGVsZXRlIiwic2VjcmV0OnJlYWQiLCJzZWNyZXQ6dXBzZXJ0Iiwic3R1ZGlvLWRvYzpkZWxldGUiLCJzdHVkaW8tZG9jOnVwc2VydCIsInN0dWRpby1kb2M6cmVhZCIsInN0dWRpby1jaGF0OnJlYWQiLCJzdHVkaW8tY2hhdDp1cHNlcnQiLCJzdHVkaW8tY2hhdDpkZWxldGUiLCJzdHVkaW8tam9iOnVwc2VydCIsInN0dWRpby1qb2I6cmVhZCIsInN0dWRpby1qb2I6ZGVsZXRlIiwic3R1ZGlvLXJlcG86dXBzZXJ0Iiwic3R1ZGlvLXJlcG86cmVhZCIsInN0dWRpby1yZXBvOmRlbGV0ZSIsInJlbGVhc2U6dXBzZXJ0IiwicmVsZWFzZTpyZWFkIiwic3R1ZGlvLXNldHRpbmdzOnJlYWQiLCJzdHVkaW8tc2V0dGluZ3M6dXBzZXJ0Iiwic3R1ZGlvLWRvYzpnbG9iYWwiLCJidWlsZGVyLXBhZ2VzOnJlYWQiLCJidWlsZGVyLXBhZ2VzOnVwc2VydCIsImJ1aWxkZXItcGFnZXM6ZGVsZXRlIiwiZGF0YS1zeW5jOnJlYWQiLCJkYXRhLXN5bmM6dXBzZXJ0Il0sInJvbGVzIjpbeyJpZCI6IjAxODliNzBlLTllZmEtZGFiYi1kMDA4LTRjOTQ0MjYwZDgyZCIsImtleSI6Im9yZy1hZG1pbiIsIm5hbWUiOiJBZG1pbiJ9XSwic2NwIjpbIm9wZW5pZCIsInByb2ZpbGUiLCJlbWFpbCIsIm9mZmxpbmUiXSwic3ViIjoia3BfYzU0MDgyMzhkNjU1NGQwZjhhMDM0NGZkM2M0NjQwODIifQ.v9JZjOuao3r-zVd-Vo4lvw5_lm--8Eu7FV5JyePXzNTVctNjnTEN1Z5EASFSRpRnuafjxRVgzCthb6fp1RsZocqgWi2LhjfP9EJCeYNAg9jg5WvYH9ZToKLM73nw9_KQ2e67by7XNDpY5rvwXCV313KVUb_C9jDyAGGzKY03ouXAD2tuf6XldRG2CdZnOwbDmb4QXFMFS2leFTmxkTXSRIuHsc_znxjElnxI25M8cJac1opD8RYHBA3F0Qd5Q9Uw5E2E6XtmqT44lRllIK0AhYnL1R8mivxPqLIEUXPHyHXzxsHideTAcaWuELkYDnLUwvKsAxU0iBxoKDLFZ1qHvQ",
-      }
-    }
+    fronticMcp
   },
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
@@ -27,10 +47,27 @@ const AGENT_OPTIONS: Options = {
         fs.readFileSync(path.join(import.meta.dirname, 'sub-agents', 'frontend-engineer.md'), 'utf8'),
       description:
         "Senior frontend engineer who writes and modifies frontend code. Use when you need to CREATE or MODIFY code files. The engineer works independently and returns results when done.",
-      tools: ["Read", "Edit", "Glob", "Write", "Bash"],
+      tools: [...Object.values(AGENT_SDK_MCP_TOOLS), "Bash"]
+    },
+    "api-agent": {
+      prompt:
+        fs.readFileSync(path.join(import.meta.dirname, 'sub-agents', 'api-agent.md'), 'utf8'),
+      description:
+        "API agent who creates and modifies API endpoints. Use when you need to CREATE or MODIFY API endpoints. The agent works independently and returns results when done.",
+      tools: [...Object.values(AGENT_SDK_MCP_TOOLS), ...Object.values(FRONTIC_MCP_TOOLS)],
     },
   },
   cwd: './workdir',
+  canUseTool: async (toolName, input) => {
+    if (toolName === AGENT_SDK_MCP_TOOLS.ASK_USER_QUESTION) {
+      return processUserQuestions(input.questions as UserQuestion[])  
+    }
+
+    return {
+      behavior: "allow",
+      updatedInput: input,
+    }
+  },
   // resume: 'f4dbf5a9-44c8-4d15-8de2-fc9d2ee8a7e3', // Resume with a previous conversation UUID
 } as const;
 
@@ -41,13 +78,13 @@ function printSdkMessage(message: SDKMessage) {
   // Handle streaming partial messages
   if (message.type === "stream_event") {
     const event = message.event;
-    
+
     // Handle message start
     if (event.type === "message_start") {
       // New message is starting
       return;
     }
-    
+
     // Handle content block start
     if (event.type === "content_block_start") {
       if (event.content_block?.type === "text") {
@@ -55,7 +92,7 @@ function printSdkMessage(message: SDKMessage) {
       }
       return;
     }
-    
+
     // Handle content block deltas (this is where we stream text)
     if (event.type === "content_block_delta") {
       if (event.delta.type === "text_delta" && event.delta.text) {
@@ -63,7 +100,7 @@ function printSdkMessage(message: SDKMessage) {
       }
       return;
     }
-    
+
     // Handle content block stop
     if (event.type === "content_block_stop") {
       if (isStreamingText) {
@@ -72,16 +109,16 @@ function printSdkMessage(message: SDKMessage) {
       }
       return;
     }
-    
+
     // Handle message stop
     if (event.type === "message_stop") {
       // Message is complete
       return;
     }
-    
+
     return;
   }
-  
+
   // Print human-readable output for complete messages
   if (message.type === "assistant" && message.message?.content) {
     for (const block of message.message.content) {
@@ -94,7 +131,7 @@ function printSdkMessage(message: SDKMessage) {
         console.log(`Tool: ${block.name}`);
         console.log(`Tool input: ${JSON.stringify(block.input)}`);
       }
-      if (block.type === "tool_use" && block.name === "Task") {
+      if (block.type === "tool_use" && block.name === AGENT_SDK_MCP_TOOLS.TASK) {
         // Typehint input, because it's unknown in the SDK  
         console.log(`Subagent invoked: ${(block.input as { subagent_type?: string }).subagent_type}`);
       }
@@ -110,7 +147,7 @@ function printSdkMessage(message: SDKMessage) {
     }
   } else if (message.type === "result") {
     console.log(`Done: ${message.subtype}`); // Final result
-    if(message.subtype === 'success') {
+    if (message.subtype === 'success') {
       // console.log(message.result); // This is already printed curing streaming of partial messages
     } else {
       console.log(message.errors);
@@ -178,20 +215,20 @@ function printPriceSummary(message: SDKMessage) {
   if (!message.total_cost_usd && !message.modelUsage) return;
 
   console.log("\n💰 Price Summary:");
-  
+
   // Total tokens and cost
   if (message.usage) {
-    const totalInput = (message.usage.input_tokens || 0) + 
-                      (message.usage.cache_creation_input_tokens || 0) + 
-                      (message.usage.cache_read_input_tokens || 0);
+    const totalInput = (message.usage.input_tokens || 0) +
+      (message.usage.cache_creation_input_tokens || 0) +
+      (message.usage.cache_read_input_tokens || 0);
     const totalOutput = message.usage.output_tokens || 0;
     console.log(`   Tokens: ${totalInput.toLocaleString()} in / ${totalOutput.toLocaleString()} out`);
   }
-  
+
   if (message.total_cost_usd !== undefined) {
     console.log(`   Total: $${message.total_cost_usd.toFixed(4)}`);
   }
-  
+
   // Per-model breakdown
   if (message.modelUsage) {
     console.log("\n   Model breakdown:");
@@ -200,9 +237,48 @@ function printPriceSummary(message: SDKMessage) {
       const inTokens = (usage.inputTokens || 0) + (usage.cacheCreationInputTokens || 0);
       const outTokens = usage.outputTokens || 0;
       const cacheRead = usage.cacheReadInputTokens || 0;
-      
+
       console.log(`   • ${modelName}: ${inTokens.toLocaleString()} in${cacheRead > 0 ? ` (+${cacheRead.toLocaleString()} cache)` : ''} / ${outTokens.toLocaleString()} out → $${usage.costUSD.toFixed(4)}`);
     }
   }
   console.log(); // Empty line after summary
+}
+
+async function processUserQuestions(questions: UserQuestion[]): Promise<PermissionResult> {
+
+  const answers = {};
+
+  for (const question of questions) {
+    // Show indexed options and let user input indices (comma-separated for multi-select)
+    console.log(`\n${question.question}`);
+    const promptOptions = question.options
+      .map((option, idx) => `  [${idx + 1}] ${option.label}: ${option.description}`)
+      .join('\n');
+    const answerInput = await rl.question(
+      `${question.header}\n${promptOptions}\nSelect option${question.options.length > 1 ? '(s)' : ''} by index${question.options.length > 1 ? ' (comma-separated for multiple)' : ''}: `
+    );
+    // Parse user input as indices
+    const selectedIndices = answerInput
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s)
+      .map(s => parseInt(s, 10) - 1)
+      .filter(idx => idx >= 0 && idx < question.options.length);
+
+    // Support single or multiple selection - store labels of selected options
+    if (selectedIndices.length > 1) {
+      answers[question.question] = selectedIndices.map(idx => question.options[idx].label);
+    } else if (selectedIndices.length === 1) {
+      answers[question.question] = question.options[selectedIndices[0]].label;
+    } else {
+      answers[question.question] = null; // Or some default/fallback
+    }
+  }
+  return {
+    behavior: "allow",
+    updatedInput: {
+      questions,  // Pass through original questions
+      answers
+    }
+  }
 }
