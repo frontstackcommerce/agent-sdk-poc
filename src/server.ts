@@ -50,9 +50,20 @@ app.get("/", (req, res) => {
 /**
  * Handles user messages and writes them to the stream
  */
-app.post("/chat", async (req, res) => {
+app.post("/chat", (req, res) => {
   const userMessage = req.body.message;
-  await runAgent(userMessage, connectionManager)
+  if (!userMessage) {
+    return res.status(400).json({ error: 'message is required' })
+  }
+
+  try {
+    runAgent(userMessage, connectionManager)
+    res.json({ success: true, message: 'Agent processing completed' })
+  } catch (error) {
+    console.error('Error running agent:', error)
+    res.status(500).json({ error: 'Failed to process message', details: error })
+  }
+
 });
 
 const server = createServer(app);
