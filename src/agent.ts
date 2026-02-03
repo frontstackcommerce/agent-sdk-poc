@@ -1,4 +1,4 @@
-import { query, Options, SDKUserMessage, SDKMessage, PermissionResult, HookCallback } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, SDKMessage, HookCallback } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
 import fs from "node:fs";
 import { ConnectionManager } from "./server";
@@ -13,38 +13,26 @@ const AGENT_SDK_MCP_TOOLS = {
   SKILL: "Skill",
 }
 
-interface UserQuestion {
-  question: string;
-  header: string;
-  options: {
-    label: string;
-    description: string;
-  }[];
-  multiSelect: boolean;
-}
-
-let sessionId = '';
-let transcriptPath = '';
-const userPromptSubmitHook: HookCallback = async (input, toolUseId, options) => {
-  sessionId = input.session_id
-  transcriptPath = input.transcript_path
+let sessionId = "";
+let transcriptPath = "";
+const userPromptSubmitHook: HookCallback = async (input) => {
+  sessionId = input.session_id;
+  transcriptPath = input.transcript_path;
   return {};
 }
 
-export function getTranscriptPath(): string
-{
-  return transcriptPath
+export function getTranscriptPath(): string {
+  return transcriptPath;
 }
 
 const abortController = new AbortController
-export function getAbortController(): AbortController
-{
-  return abortController
+export function getAbortController(): AbortController {
+  return abortController;
 }
 
 const AGENT_OPTIONS: Options = {
   systemPrompt:
-    fs.readFileSync(path.join(import.meta.dirname, '..', 'sub-agents', 'buddy.md'), 'utf8'),
+    fs.readFileSync(path.join(import.meta.dirname, "..", "sub-agents", "buddy.md"), "utf8"),
   tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
   allowedTools: [
     // Built-in tools
@@ -61,27 +49,30 @@ const AGENT_OPTIONS: Options = {
   agents: {
     "frontend-engineer": {
       prompt:
-        fs.readFileSync(path.join(import.meta.dirname, '..', 'sub-agents', 'frontend-engineer.md'), 'utf8'),
+        fs.readFileSync(path.join(import.meta.dirname, "..", "sub-agents", "frontend-engineer.md"), "utf8"),
       description:
         "Senior frontend engineer who writes and modifies frontend code. Use when you need to CREATE or MODIFY code files. The engineer works independently and returns results when done.",
       tools: [...Object.values(AGENT_SDK_MCP_TOOLS), "Bash"]
     },
     "api-agent": {
       prompt:
-        fs.readFileSync(path.join(import.meta.dirname, '..', 'sub-agents', 'api-agent.md'), 'utf8'),
+        fs.readFileSync(path.join(import.meta.dirname, "..", "sub-agents", "api-agent.md"), "utf8"),
       description:
         "API agent who creates and modifies API endpoints. Use when you need to CREATE or MODIFY API endpoints. The agent works independently and returns results when done.",
       tools: [...Object.values(AGENT_SDK_MCP_TOOLS)], // ...Object.values(FRONTIC_MCP_TOOLS)],
     },
   },
-  settingSources: ['user'],
+  settingSources: ["user"],
   hooks: {
     UserPromptSubmit: [{
       hooks: [userPromptSubmitHook],
     }],
+    SessionEnd: [{
+      hooks: [sessionEndHook],
+    }]
   },
-  cwd: path.join(import.meta.dirname, '..', '..', 'app'),
-  additionalDirectories: [path.join(import.meta.dirname, '..', '..', 'app')],
+  cwd: path.join(import.meta.dirname, "..", "..", "app"),
+  additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
   canUseTool: async (toolName, input) => {
     return {
       behavior: "allow",
@@ -105,10 +96,10 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
       }],
     },
     parent_tool_use_id: null,
-    session_id: ''
-  }
+    session_id: ""
+  };
 
-  // Required because we're using complex prompt objects instead of strings
+  // Required because we"re using complex prompt objects instead of strings
   const userMessageIterable = async function* () {
     yield userMessage;
   }
@@ -153,12 +144,12 @@ function printPriceSummary(message: SDKMessage) {
   if (message.modelUsage) {
     console.log("\n   Model breakdown:");
     for (const [model, usage] of Object.entries(message.modelUsage)) {
-      const modelName = model.replace('claude-', '').replace(/\d{8}$/, '').trim();
+      const modelName = model.replace("claude-", "").replace(/\d{8}$/, "").trim();
       const inTokens = (usage.inputTokens || 0) + (usage.cacheCreationInputTokens || 0);
       const outTokens = usage.outputTokens || 0;
       const cacheRead = usage.cacheReadInputTokens || 0;
 
-      console.log(`   • ${modelName}: ${inTokens.toLocaleString()} in${cacheRead > 0 ? ` (+${cacheRead.toLocaleString()} cache)` : ''} / ${outTokens.toLocaleString()} out → $${usage.costUSD.toFixed(4)}`);
+      console.log(`   • ${modelName}: ${inTokens.toLocaleString()} in${cacheRead > 0 ? ` (+${cacheRead.toLocaleString()} cache)` : ""} / ${outTokens.toLocaleString()} out → $${usage.costUSD.toFixed(4)}`);
     }
   }
   console.log(); // Empty line after summary

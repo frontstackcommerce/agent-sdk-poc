@@ -1,6 +1,6 @@
-workdir/
-node_modules/
-package-lock.json
+/workdir/
+/node_modules/
 
 .env
 .DS_Store
+/.eslintcache

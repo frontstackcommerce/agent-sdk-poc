@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import rl from "readline"
+import rl from "readline";
 
 export async function* fetchMessages(transcriptPath: string) {
-    if (transcriptPath === '' || !fs.existsSync(transcriptPath)) {
+    if (transcriptPath === "" || !fs.existsSync(transcriptPath)) {
         return
     }
 

@@ -1,27 +1,36 @@
 {
-  "name": "agent-test",
+  "name": "frontic-agent",
+  "type": "module",
   "version": "1.0.0",
+  "description": "",
+  "author": "frontstack GmbH DBA Frontic",
+  "license": "UNLICENSED",
   "main": "agent.ts",
   "scripts": {
-    "agent": "npx tsx src/agent.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache --fix .",
+    "nolyfill": "pnpm dlx nolyfill",
+    "up": "taze -w -r -I -f && pnpm prune && pnpm dedupe",
     "server": "npx tsx src/server.ts"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-    "@types/ws": "^8.18.1",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.77",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "ws": "^8.19.0"
   },
-  "type": "module",
   "devDependencies": {
+    "@antfu/eslint-config": "^7.2.0",
     "@anthropic-ai/sdk": "^0.71.2",
-    "@modelcontextprotocol/sdk": "^1.25.1",
+    "@eslint/js": "^9.39.2",
+    "@modelcontextprotocol/sdk": "^1.25.3",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.0.3"
+    "@types/node": "^25.2.0",
+    "@types/ws": "^8.18.1",
+    "eslint": "^9.39.2",
+    "globals": "^17.3.0",
+    "taze": "^19.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
   }
 }
