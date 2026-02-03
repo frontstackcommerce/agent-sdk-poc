@@ -43,10 +43,10 @@ const userPromptSubmitHook: HookCallback = async (input, toolUseId, options) => 
 const AGENT_OPTIONS: Options = {
   systemPrompt:
     fs.readFileSync(path.join(import.meta.dirname, '..', 'sub-agents', 'buddy.md'), 'utf8'),
-  tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
+  //tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
   allowedTools: [
     // Built-in tools
-    ...Object.values(AGENT_SDK_MCP_TOOLS),
+    //...Object.values(AGENT_SDK_MCP_TOOLS),
     // Frontic MCP tools
     // ...Object.values(FRONTIC_MCP_TOOLS),
   ],
@@ -107,7 +107,7 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
       }],
     },
     parent_tool_use_id: null,
-    //session_id: ''
+    session_id: ''
   }
 
   // Required because we're using complex prompt objects instead of strings
