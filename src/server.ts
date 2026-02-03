@@ -1,11 +1,10 @@
+import { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
+import { runAgent } from "./agent";
 
-let chatMessage: { role: string; content: string }[] = []
-let count = 0;
-
-class ConnectionManager {
+export class ConnectionManager {
   private clients: Set<ws>;
 
   constructor() {
@@ -14,21 +13,18 @@ class ConnectionManager {
 
   addClient(ws: ws) {
       this.clients.add(ws);
-      console.log(`Client added. Total clients: ${this.clients.size}`);
   }
 
   removeClient(ws: ws) {
       this.clients.delete(ws);
-      console.log(`Client removed. Total clients: ${this.clients.size}`);
   }
 
-  broadcast(message: string, sender: ws | null = null) {
+  broadcast(message: SDKMessage, sender: ws | null = null) {
       this.clients.forEach(client => {
           if (client !== sender && client.readyState === client.OPEN) {
               try {
-                  client.send(message);
+                  client.send(JSON.stringify(message));
               } catch (error) {
-                  console.error('Error broadcasting to client:', error);
                   this.removeClient(client);
               }
           }
@@ -53,11 +49,7 @@ app.get("/", (req, res) => {
  */
 app.post("/chat", (req, res) => {
   const userMessage = req.body.message;
-  chatMessage.push({
-    role: "user",
-    content: userMessage,
-  });
-  count++;
+  runAgent(userMessage, connectionManager)
 });
 
 const server = createServer(app);
@@ -72,18 +64,10 @@ wss.on('connection', function connection(ws, request) {
   const clientIP = request.socket.remoteAddress;
   console.log(`New client connected from ${clientIP}`);
 
-  // Send welcome message
-  ws.send('Welcome to the WebSocket server!');
-
   connectionManager.addClient(ws);
-  ws.send(`Welcome! There are ${connectionManager.getClientCount()} clients connected.`);
-
-  // Notify other clients about new connection
-  connectionManager.broadcast(`A new user joined the chat!`, ws);
 
   ws.on('close', function close(code, reason) {
     connectionManager.removeClient(ws);
-    connectionManager.broadcast(`A user left the chat.`);
   });
 
   ws.on('error', function error(err) {
