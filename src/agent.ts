@@ -107,7 +107,7 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
       }],
     },
     parent_tool_use_id: null,
-    session_id: ''
+    //session_id: ''
   }
 
   // Required because we're using complex prompt objects instead of strings

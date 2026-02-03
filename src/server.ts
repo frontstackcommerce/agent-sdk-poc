@@ -63,10 +63,7 @@ const wss = new WebSocketServer({
   path: '/conversation-stream',
 });
 
-wss.on('connection', function connection(ws, request) {
-  const clientIP = request.socket.remoteAddress;
-  console.log(`New client connected from ${clientIP}`);
-
+wss.on('connection', function connection(ws) {
   connectionManager.addClient(ws);
 
   ws.on('close', function close(code, reason) {
