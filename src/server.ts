@@ -50,9 +50,9 @@ app.get("/", (req, res) => {
 /**
  * Handles user messages and writes them to the stream
  */
-app.post("/chat", (req, res) => {
+app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
-  runAgent(userMessage, connectionManager)
+  await runAgent(userMessage, connectionManager)
 });
 
 const server = createServer(app);
