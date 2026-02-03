@@ -15,14 +15,26 @@ const AGENT_SDK_MCP_TOOLS = {
 
 let sessionId = "";
 let transcriptPath = "";
+let agentIsActive = false;
+
 const userPromptSubmitHook: HookCallback = async (input) => {
   sessionId = input.session_id;
   transcriptPath = input.transcript_path;
+  agentIsActive = true;
+  return {};
+}
+
+const stopHook: HookCallback = async () => {
+  // TODO: Can we get usage (token, money) here to pass to backend?
+  agentIsActive = false;
   return {};
 }
 
 export function getTranscriptPath(): string {
   return transcriptPath;
+}
+export function isAgentStillActive() {
+  return agentIsActive;
 }
 
 const abortController = new AbortController
@@ -67,12 +79,14 @@ const AGENT_OPTIONS: Options = {
     UserPromptSubmit: [{
       hooks: [userPromptSubmitHook],
     }],
-    SessionEnd: [{
-      hooks: [sessionEndHook],
+    Stop: [{
+      hooks: [stopHook],
     }]
   },
-  cwd: path.join(import.meta.dirname, "..", "..", "app"),
-  additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
+  //cwd: path.join(import.meta.dirname, "..", "..", "app"),
+  //additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
+  cwd: "./workdir",
+  additionalDirectories: ["./workdir"],
   canUseTool: async (toolName, input) => {
     return {
       behavior: "allow",
@@ -103,8 +117,6 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
   const userMessageIterable = async function* () {
     yield userMessage;
   }
-
-  // TODO: Check if stream is still running (i.e. no message_end received, yet) and block new query
 
   // Agentic loop: streams messages as Claude works for this single user turn.
   // On subsequent turns, `continue: true` keeps the same conversation.

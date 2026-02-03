@@ -2,7 +2,7 @@ import { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
-import { getTranscriptPath, runAgent } from "./agent";
+import { getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
 
 import "dotenv/config";
 import { fetchMessages } from "./history";
@@ -56,7 +56,12 @@ app.get("/", (req, res) => {
 app.post("/chat", (req, res) => {
   const userMessage = req.body.message;
   if (!userMessage) {
-    return res.status(400).json({ error: "message is required" });
+    return res.status(400).json({ success: false, error: "message is required" });
+  }
+
+  if (isAgentStillActive()) {
+      res.status(409).json({ success: false, error: 'Agent is blocked' })
+      return;
   }
 
   try {
@@ -64,7 +69,7 @@ app.post("/chat", (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Error running agent:", error);
-    res.status(500).json({ error: "Failed to process message", details: error });
+    res.status(500).json({ success: false, error: "Failed to process message", details: error });
   }
 
 });
