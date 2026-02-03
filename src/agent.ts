@@ -1,4 +1,4 @@
-import { query, Options, SDKUserMessage, SDKMessage, PermissionResult, HookCallback, HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, SDKMessage, PermissionResult, HookCallback } from "@anthropic-ai/claude-agent-sdk";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
@@ -25,20 +25,24 @@ interface UserQuestion {
   multiSelect: boolean;
 }
 
-const sessionStartHook: HookCallback = async (input, toolUseId, options) => {
-  console.log('Session start hook', input, toolUseId, options);
-  return {};
-}
-
 let sessionId = '';
 let transcriptPath = '';
 const userPromptSubmitHook: HookCallback = async (input, toolUseId, options) => {
-  console.log('User prompt submit hook', input, toolUseId, options);
   sessionId = input.session_id
   transcriptPath = input.transcript_path
   return {};
 }
 
+export function getTranscriptPath(): string
+{
+  return transcriptPath
+}
+
+const abortController = new AbortController
+export function getAbortController(): AbortController
+{
+  return abortController
+}
 
 const AGENT_OPTIONS: Options = {
   systemPrompt:
@@ -91,6 +95,7 @@ const AGENT_OPTIONS: Options = {
     }
   },
   resume: sessionId, // Resume with a previous Claude session ID
+  abortController: abortController
 } as const;
 
 const rl = createInterface({ input, output });

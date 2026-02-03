@@ -1,10 +1,11 @@
-import { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { AbortError, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
-import { runAgent } from "./agent";
+import { getAbortController, getTranscriptPath, runAgent } from "./agent";
 
 import 'dotenv/config'
+import { fetchMessages } from "./history";
 
 export class ConnectionManager {
   private clients: Set<ws>;
@@ -60,12 +61,18 @@ app.post("/chat", (req, res) => {
 
   try {
     runAgent(userMessage, connectionManager)
-    res.json({ success: true, message: 'Agent processing completed' })
+    res.json({ success: true })
   } catch (error) {
     console.error('Error running agent:', error)
     res.status(500).json({ error: 'Failed to process message', details: error })
   }
 
+});
+
+app.delete('/abort', (req, res) => {
+  //getAbortController().abort('Aborted by user')
+
+  res.status(501).json({ success: false })
 });
 
 const server = createServer(app);
@@ -76,8 +83,13 @@ const wss = new WebSocketServer({
   path: '/conversation-stream',
 });
 
-wss.on('connection', function connection(ws) {
+wss.on('connection', async function connection(ws) {
   connectionManager.addClient(ws);
+
+  const history = fetchMessages(getTranscriptPath())
+  for await (const message of history) {
+    ws.send(message)
+  }
 
   ws.on('close', function close(code, reason) {
     connectionManager.removeClient(ws);
