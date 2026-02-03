@@ -78,8 +78,8 @@ const AGENT_OPTIONS: Options = {
       hooks: [userPromptSubmitHook],
     }],
   },
-  cwd: '../../app',
-  additionalDirectories: ['./../../app'],
+  cwd: path.join(import.meta.dirname, '..', '..', 'app'),
+  additionalDirectories: [path.join(import.meta.dirname, '..', '..', 'app')],
   canUseTool: async (toolName, input) => {
     if (toolName === AGENT_SDK_MCP_TOOLS.ASK_USER_QUESTION) {
       return processUserQuestions(input.questions as UserQuestion[])
