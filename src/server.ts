@@ -4,6 +4,8 @@ import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
 import { runAgent } from "./agent";
 
+import 'dotenv/config'
+
 export class ConnectionManager {
   private clients: Set<ws>;
 
