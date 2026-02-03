@@ -1,6 +1,4 @@
 import { query, Options, SDKUserMessage, SDKMessage, PermissionResult, HookCallback } from "@anthropic-ai/claude-agent-sdk";
-import { createInterface } from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
 import fs from "node:fs";
 import { ConnectionManager } from "./server";
@@ -85,10 +83,6 @@ const AGENT_OPTIONS: Options = {
   cwd: path.join(import.meta.dirname, '..', '..', 'app'),
   additionalDirectories: [path.join(import.meta.dirname, '..', '..', 'app')],
   canUseTool: async (toolName, input) => {
-    if (toolName === AGENT_SDK_MCP_TOOLS.ASK_USER_QUESTION) {
-      return processUserQuestions(input.questions as UserQuestion[])
-    }
-
     return {
       behavior: "allow",
       updatedInput: input,
@@ -98,7 +92,6 @@ const AGENT_OPTIONS: Options = {
   abortController: abortController
 } as const;
 
-const rl = createInterface({ input, output });
 let shouldContinueConversation = false;
 
 export const runAgent = async (userPrompt: string, connectionManager: ConnectionManager) => {
@@ -169,43 +162,4 @@ function printPriceSummary(message: SDKMessage) {
     }
   }
   console.log(); // Empty line after summary
-}
-
-async function processUserQuestions(questions: UserQuestion[]): Promise<PermissionResult> {
-
-  const answers = {};
-
-  for (const question of questions) {
-    // Show indexed options and let user input indices (comma-separated for multi-select)
-    console.log(`\n${question.question}`);
-    const promptOptions = question.options
-      .map((option, idx) => `  [${idx + 1}] ${option.label}: ${option.description}`)
-      .join('\n');
-    const answerInput = await rl.question(
-      `${question.header}\n${promptOptions}\nSelect option${question.options.length > 1 ? '(s)' : ''} by index${question.options.length > 1 ? ' (comma-separated for multiple)' : ''}: `
-    );
-    // Parse user input as indices
-    const selectedIndices = answerInput
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s)
-      .map(s => parseInt(s, 10) - 1)
-      .filter(idx => idx >= 0 && idx < question.options.length);
-
-    // Support single or multiple selection - store labels of selected options
-    if (selectedIndices.length > 1) {
-      answers[question.question] = selectedIndices.map(idx => question.options[idx].label);
-    } else if (selectedIndices.length === 1) {
-      answers[question.question] = question.options[selectedIndices[0]].label;
-    } else {
-      answers[question.question] = null; // Or some default/fallback
-    }
-  }
-  return {
-    behavior: "allow",
-    updatedInput: {
-      questions,  // Pass through original questions
-      answers
-    }
-  }
 }
