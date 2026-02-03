@@ -1,4 +1,4 @@
-import { query, Options, SDKUserMessage, SDKMessage, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, SDKMessage, PermissionResult, HookCallback, HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
@@ -13,6 +13,7 @@ const AGENT_SDK_MCP_TOOLS = {
   TASK: "Task",
   WRITE: "Write",
   ASK_USER_QUESTION: "AskUserQuestion",
+  SKILL: "Skill",
 }
 
 interface UserQuestion {
@@ -25,6 +26,17 @@ interface UserQuestion {
   multiSelect: boolean;
 }
 
+const sessionStartHook: HookCallback = async (input, toolUseId, options) => {
+  console.log('Session start hook', input, toolUseId, options);
+  return {};
+}
+
+const userPromptSubmitHook: HookCallback = async (input, toolUseId, options) => {
+  console.log('User prompt submit hook', input, toolUseId, options);
+  return {};
+}
+
+
 const AGENT_OPTIONS: Options = {
   systemPrompt:
     fs.readFileSync(path.join(import.meta.dirname, 'sub-agents', 'buddy.md'), 'utf8'),
@@ -33,10 +45,10 @@ const AGENT_OPTIONS: Options = {
     // Built-in tools
     ...Object.values(AGENT_SDK_MCP_TOOLS),
     // Frontic MCP tools
-    ...Object.values(FRONTIC_MCP_TOOLS),
+    // ...Object.values(FRONTIC_MCP_TOOLS),
   ],
   mcpServers: {
-    fronticMcp
+    // fronticMcp
   },
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
@@ -54,13 +66,20 @@ const AGENT_OPTIONS: Options = {
         fs.readFileSync(path.join(import.meta.dirname, 'sub-agents', 'api-agent.md'), 'utf8'),
       description:
         "API agent who creates and modifies API endpoints. Use when you need to CREATE or MODIFY API endpoints. The agent works independently and returns results when done.",
-      tools: [...Object.values(AGENT_SDK_MCP_TOOLS), ...Object.values(FRONTIC_MCP_TOOLS)],
+      tools: [...Object.values(AGENT_SDK_MCP_TOOLS)], // ...Object.values(FRONTIC_MCP_TOOLS)],
     },
   },
+  settingSources: ['user'],
+  hooks: {
+    UserPromptSubmit: [{
+      hooks: [userPromptSubmitHook],
+    }],
+  },
   cwd: './workdir',
+  additionalDirectories: ['./workdir'],
   canUseTool: async (toolName, input) => {
     if (toolName === AGENT_SDK_MCP_TOOLS.ASK_USER_QUESTION) {
-      return processUserQuestions(input.questions as UserQuestion[])  
+      return processUserQuestions(input.questions as UserQuestion[])
     }
 
     return {
@@ -68,13 +87,14 @@ const AGENT_OPTIONS: Options = {
       updatedInput: input,
     }
   },
-  // resume: 'f4dbf5a9-44c8-4d15-8de2-fc9d2ee8a7e3', // Resume with a previous conversation UUID
+  // resume: '17db92b4-f1fe-49c9-b9f3-fd4f293ee537', // Resume with a previous conversation UUID
 } as const;
 
 // State tracking for streaming output
 let isStreamingText = false;
 
 function printSdkMessage(message: SDKMessage) {
+
   // Handle streaming partial messages
   if (message.type === "stream_event") {
     const event = message.event;
@@ -153,7 +173,11 @@ function printSdkMessage(message: SDKMessage) {
       console.log(message.errors);
     }
     printPriceSummary(message);
+  } else if (message.type === "system") {
+    console.log('System message:', message);
   }
+
+  message
 }
 
 const rl = createInterface({ input, output });
