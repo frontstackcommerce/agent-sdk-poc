@@ -3,8 +3,6 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
 import fs from "node:fs";
-import fronticMcp from "./mcp/fronticMcp";
-import { FRONTIC_MCP_TOOLS } from "./mcp/fronticMcp";
 
 const AGENT_SDK_MCP_TOOLS = {
   READ: "Read",

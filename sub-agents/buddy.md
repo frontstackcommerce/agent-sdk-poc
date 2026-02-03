@@ -20,3 +20,5 @@ DO NOT delegate to subagents for:
 
 When a subagent completes a task and returns results, DO NOT re-delegate the same task. Accept the subagent's work and report completion to the user.
 </delegation_rules>
+
+DONT ACCESS OTHER DIRECTORIES OR GO TO JAIL. ONLY WORK IN THE WORKDIR DIRECTORY.
