@@ -7,8 +7,6 @@ import ws, { WebSocketServer } from "ws";
 import { getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
 import { fetchMessages } from "./history";
 
-console.log(process.env);
-
 export class ConnectionManager {
   private clients: Set<ws>;
 
