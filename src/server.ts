@@ -1,11 +1,13 @@
+import "dotenv/config";
+
 import { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
 import { getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
-
-import "dotenv/config";
 import { fetchMessages } from "./history";
+
+console.log(process.env);
 
 export class ConnectionManager {
   private clients: Set<ws>;
