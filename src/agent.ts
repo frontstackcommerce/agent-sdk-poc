@@ -1,6 +1,9 @@
 import { query, Options, SDKUserMessage, SDKMessage, HookCallback, McpServerConfig, AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
 import { ConnectionManager } from "./server";
+import "dotenv/config";
+
+console.log(process.env)
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -97,8 +100,6 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
   const userMessageIterable = async function* () {
     yield userMessage;
   }
-
-  console.log(process.env)
 
   // Agentic loop: streams messages as Claude works for this single user turn.
   // On subsequent turns, `continue: true` keeps the same conversation.
