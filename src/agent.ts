@@ -1,7 +1,6 @@
 import { query, Options, SDKUserMessage, SDKMessage, HookCallback, McpServerConfig, AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
 import { ConnectionManager } from "./server";
-import "dotenv/config";
 
 console.log(process.env)
 
