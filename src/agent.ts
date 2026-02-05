@@ -98,6 +98,8 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
     yield userMessage;
   }
 
+  console.log(process.env)
+
   // Agentic loop: streams messages as Claude works for this single user turn.
   // On subsequent turns, `continue: true` keeps the same conversation.
   for await (const message of query({
@@ -108,6 +110,9 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
       continue: shouldContinueConversation,
     },
   })) {
+    if (message.type === "system" && message.subtype === "init") {
+      console.log("Available MCP tools:", message.mcp_servers);
+    }
     connectionManager.broadcast(message);
   }
 
