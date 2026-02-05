@@ -1,10 +1,10 @@
 import "dotenv/config";
 
-import { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
-import { getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
+import { type Configuration, getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
 import { fetchMessages } from "./history";
 
 export class ConnectionManager {
@@ -64,8 +64,10 @@ app.post("/chat", (req, res) => {
       return;
   }
 
+  const configuration: Configuration = req.body.configuration ?? {};
+
   try {
-    runAgent(userMessage, connectionManager);
+    runAgent(userMessage, connectionManager, configuration);
     res.json({ success: true });
   } catch (error) {
     console.error("Error running agent:", error);

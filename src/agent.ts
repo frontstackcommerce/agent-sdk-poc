@@ -1,7 +1,28 @@
-import { query, Options, SDKUserMessage, SDKMessage, HookCallback } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, SDKMessage, HookCallback, McpServerConfig, AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
 import fs from "node:fs";
 import { ConnectionManager } from "./server";
+
+export type Configuration = {
+  agents: Record<string, AgentDefinition>
+  /**
+   * allowedTools: ["mcp__secure-api__*"]
+   */
+  allowedTools?: string[]
+  /**
+   * mcpServers: {
+      "secure-api": {
+        type: "http",
+        url: "https://api.example.com/mcp",
+        headers: {
+          Authorization: "Bearer some-token"
+        }
+      }
+    },
+   */
+  mcpServers?: Record<string, McpServerConfig>
+  systemPrompt?: string
+};
 
 const AGENT_SDK_MCP_TOOLS = {
   READ: "Read",
@@ -43,21 +64,19 @@ export function getAbortController(): AbortController {
 }
 
 const AGENT_OPTIONS: Options = {
+  // TODO: Remove and pass-through via chat call
   systemPrompt:
     fs.readFileSync(path.join(import.meta.dirname, "..", "sub-agents", "buddy.md"), "utf8"),
   tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
+  // TODO: Remove and pass-through via chat call
   allowedTools: [
     // Built-in tools
     ...Object.values(AGENT_SDK_MCP_TOOLS),
-    // Frontic MCP tools
-    // ...Object.values(FRONTIC_MCP_TOOLS),
   ],
-  mcpServers: {
-    // fronticMcp
-  },
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
   includePartialMessages: true, // Enable streaming of partial messages for real-time output
+  // TODO: Move agents to Frontic and pass-through via chat call
   agents: {
     "frontend-engineer": {
       prompt:
@@ -71,7 +90,7 @@ const AGENT_OPTIONS: Options = {
         fs.readFileSync(path.join(import.meta.dirname, "..", "sub-agents", "api-agent.md"), "utf8"),
       description:
         "API agent who creates and modifies API endpoints. Use when you need to CREATE or MODIFY API endpoints. The agent works independently and returns results when done.",
-      tools: [...Object.values(AGENT_SDK_MCP_TOOLS)], // ...Object.values(FRONTIC_MCP_TOOLS)],
+      tools: [...Object.values(AGENT_SDK_MCP_TOOLS)],
     },
   },
   settingSources: ["user"],
@@ -83,10 +102,8 @@ const AGENT_OPTIONS: Options = {
       hooks: [stopHook],
     }]
   },
-  //cwd: path.join(import.meta.dirname, "..", "..", "app"),
-  //additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
-  cwd: "./workdir",
-  additionalDirectories: ["./workdir"],
+  cwd: path.join(import.meta.dirname, "..", "..", "app"),
+  additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
   canUseTool: async (toolName, input) => {
     return {
       behavior: "allow",
@@ -99,7 +116,7 @@ const AGENT_OPTIONS: Options = {
 
 let shouldContinueConversation = false;
 
-export const runAgent = async (userPrompt: string, connectionManager: ConnectionManager) => {
+export const runAgent = async (userPrompt: string, connectionManager: ConnectionManager, configuration: Configuration) => {
   const userMessage: SDKUserMessage = {
     type: "user",
     message: {
@@ -124,6 +141,11 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
     prompt: userMessageIterable(),
     options: {
       ...AGENT_OPTIONS,
+      ...configuration,
+      allowedTools: [
+        ...(AGENT_OPTIONS.allowedTools ?? []),
+        ...(configuration.allowedTools ?? []),
+      ],
       continue: shouldContinueConversation,
     },
   })) {
