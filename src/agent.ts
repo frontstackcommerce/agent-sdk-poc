@@ -119,7 +119,7 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
           continue;
         }
         
-        console.log('Message Type', message.type);
+        console.log('Message', message);
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
           userAnswers = message as any as Record<string, string>;
           connectionManager.broadcast(message);
