@@ -7,6 +7,11 @@ import ws, { WebSocketServer } from "ws";
 import { activeStream, getTranscriptPath, isInitialized, runAgent } from "./agent";
 import { fetchMessages } from "./history";
 
+type ProtocolError = {
+  type: "error",
+  error: string,
+};
+
 export class ConnectionManager {
   private clients: Set<ws>;
 
@@ -22,7 +27,7 @@ export class ConnectionManager {
     this.clients.delete(ws);
   }
 
-  broadcast(message: SDKMessage, sender: ws | null = null) {
+  broadcast(message: SDKMessage | ProtocolError, sender: ws | null = null) {
     this.clients.forEach(client => {
       if (client !== sender && client.readyState === client.OPEN) {
         try {
@@ -44,13 +49,22 @@ async function handleNewMessage(
   message: ws.RawData,
 ) {
   // TODO: Message schema validation
+  // TODO: Receive image attachments in prompt
 
-  const input = JSON.parse(message.toString());
+  let input = undefined;
+  try {
+    input = JSON.parse(message.toString());
+  } catch {
+    connectionManager.broadcast({ type: "error", error: "Invalid payload" })
+    return;
+  }
+
   if (input.type === 'initialize' && !isInitialized()) {
     runAgent(connectionManager, input.data);
   } else if (input.type === 'user_message') {
     if (!isInitialized()) {
       // TODO: Notify error
+      connectionManager.broadcast({ type: "error", error: "Agent must be initialized before use" })
     } else {
       messages.push(input.data);
     }
@@ -71,7 +85,7 @@ const server = createServer(app);
 const wss = new WebSocketServer({
   server,
   clientTracking: true,
-  path: "/conversation-stream",
+  path: "/",
 });
 
 wss.on("connection", async function connection(ws) {

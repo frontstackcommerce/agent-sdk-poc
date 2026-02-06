@@ -35,7 +35,6 @@ const userPromptSubmitHook: HookCallback = async (input) => {
 }
 
 const stopHook: HookCallback = async () => {
-  // TODO: Can we get usage (token, money) here to pass to backend?
   agentIsActive = false;
   return {};
 }
