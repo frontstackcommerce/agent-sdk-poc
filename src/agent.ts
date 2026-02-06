@@ -80,10 +80,8 @@ const AGENT_OPTIONS: Options = {
       hooks: [stopHook],
     }]
   },
-  //cwd: path.join(import.meta.dirname, "..", "..", "app"),
-  //additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
-  cwd: path.join(import.meta.dirname, "..", "workdir"),
-  additionalDirectories: [path.join(import.meta.dirname, "..", "workdir")],
+  cwd: path.join(import.meta.dirname, "..", "..", "app"),
+  additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
   canUseTool: async (toolName, input) => {
     if(toolName === 'AskUserQuestion') {
       return await handleUserQuestion(input as AskUserQuestionInput, connectionManager);
