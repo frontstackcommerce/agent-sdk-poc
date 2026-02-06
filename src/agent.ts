@@ -1,24 +1,10 @@
-import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
+import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage, UserQuestionAnswer } from "./server";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
-  /**
-   * allowedTools: ["mcp__secure-api__*"]
-   */
   allowedTools?: string[]
-  /**
-   * mcpServers: {
-      "secure-api": {
-        type: "http",
-        url: "https://api.example.com/mcp",
-        headers: {
-          Authorization: "Bearer some-token"
-        }
-      }
-    },
-   */
   mcpServers?: Record<string, McpServerConfig>
   systemPrompt?: string
 };
@@ -49,13 +35,15 @@ export function isAgentStillActive() {
 let waitForUserAnswers: boolean = false;
 let userAnswers: UserQuestionAnswer | undefined = undefined;
 
+/**
+ * Handles the user question and waits for the user to answer.
+ */
 const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager: ConnectionManager): Promise<PermissionResult> => {
   connectionManager.broadcast({ type: "ask_user_question", data: input })
 
   waitForUserAnswers = true;
   while(waitForUserAnswers) {
     if(userAnswers) {
-      console.log('User answers', userAnswers);
       waitForUserAnswers = false;
       return {
         behavior: "allow",
@@ -91,10 +79,8 @@ const AGENT_OPTIONS: Options = {
   additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
   canUseTool: async (toolName, input) => {
     if(toolName === 'AskUserQuestion') {
-      console.log('AskUserQuestion', input);
       return await handleUserQuestion(input as AskUserQuestionInput, connectionManager);
     }
-    console.log('Other tool', toolName, input);
     return {
       behavior: "allow",
       updatedInput: input
@@ -120,14 +106,14 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
           continue;
         }
         
-        console.log('Message', message);
+        // Handle user question responses
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
           userAnswers = message.data;
           connectionManager.broadcast(message);
           continue;
         }
 
-        // Only return user messages
+        // Only broadcast user messages
         if(message.type !== "user_message") {
           continue;
         }

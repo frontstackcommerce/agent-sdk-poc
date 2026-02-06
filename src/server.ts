@@ -103,7 +103,7 @@ async function handleNewMessage(
       throw new Error('Invalid payload');
     }
   } catch {
-    connectionManager.broadcast({ type: "error", error: "Invalid payload " + (message.toString()) })
+    connectionManager.broadcast({ type: "error", error: "Invalid payload " })
     return;
   }
 
