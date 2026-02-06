@@ -12,6 +12,24 @@ type ProtocolError = {
   error: string,
 };
 
+export type AskUserQuestionInput = {
+  questions: {
+    question: string
+    header: string
+    options: {
+      label: string
+      description: string
+    }[]
+    multiSelect: boolean
+  }[]
+  answers?: Record<string, string>
+}
+
+export type AskUserQuestionRequest = {
+  type: "ask_user_question"
+  data: AskUserQuestionInput
+}
+
 export class ConnectionManager {
   private clients: Set<ws>;
 
@@ -27,7 +45,7 @@ export class ConnectionManager {
     this.clients.delete(ws);
   }
 
-  broadcast(message: SDKMessage | ProtocolError, sender: ws | null = null) {
+  broadcast(message: SDKMessage | ProtocolError | AskUserQuestionRequest, sender: ws | null = null) {
     this.clients.forEach(client => {
       if (client !== sender && client.readyState === client.OPEN) {
         try {
@@ -73,7 +91,7 @@ async function handleNewMessage(
   }
 }
 
-const connectionManager = new ConnectionManager();
+export const connectionManager = new ConnectionManager();
 
 const app = express();
 const port = 8080;

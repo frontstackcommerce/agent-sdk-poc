@@ -1,6 +1,6 @@
-import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
-import { ConnectionManager, messages } from "./server";
+import { ConnectionManager, messages, connectionManager, AskUserQuestionInput } from "./server";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -46,6 +46,32 @@ export function isAgentStillActive() {
   return agentIsActive;
 }
 
+let waitForUserAnswers: boolean = false;
+let userAnswers: Record<string, string> = {};
+
+const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager: ConnectionManager): Promise<PermissionResult> => {
+  connectionManager.broadcast({ type: "ask_user_question", data: input })
+
+  waitForUserAnswers = true;
+  while(waitForUserAnswers) {
+    if(userAnswers) {
+      return {
+        behavior: "allow",
+        updatedInput: {
+          ...input,
+          answers: userAnswers,
+        },
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+
+  return {
+    behavior: "allow",
+    updatedInput: input,
+  }
+}
+
 const AGENT_OPTIONS: Options = {
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
@@ -62,9 +88,14 @@ const AGENT_OPTIONS: Options = {
   cwd: path.join(import.meta.dirname, "..", "..", "app"),
   additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
   canUseTool: async (toolName, input) => {
+    if(toolName === 'AskUserQuestion') {
+      console.log('AskUserQuestion', input);
+      return await handleUserQuestion(input as AskUserQuestionInput, connectionManager);
+    }
+    console.log('Other tool', toolName, input);
     return {
       behavior: "allow",
-      updatedInput: input,
+      updatedInput: input
     }
   },
   resume: sessionId, // Resume with a previous Claude session ID
@@ -84,6 +115,13 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
       while (messages.length > 0) {
         const message = messages.shift();
         if (message === undefined) {
+          continue;
+        }
+
+        if(waitForUserAnswers && message.type === "ask_user_question_response") {
+          userAnswers = message as any as Record<string, string>;
+          connectionManager.broadcast(message);
+          waitForUserAnswers = false;
           continue;
         }
 
