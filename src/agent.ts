@@ -133,14 +133,24 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         };
 
         for (const image of message.data.images) {
-          (userMessage.message.content as ContentBlockParam[]).push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/png',
-              data: image
-            }
-          })
+          const imageData = image.match(/^data:([^;]+);base64,(.+)$/)
+          if (imageData) {
+            const mimeType = imageData[1] as
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/gif'
+              | 'image/webp';
+            const base64Data = imageData[2];
+
+            (userMessage.message.content as ContentBlockParam[]).push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mimeType,
+                data: base64Data
+              }
+            })
+          }
         }
 
         connectionManager.broadcast(userMessage);
