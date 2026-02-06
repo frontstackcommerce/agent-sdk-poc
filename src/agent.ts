@@ -47,14 +47,14 @@ export function isAgentStillActive() {
 }
 
 let waitForUserAnswers: boolean = false;
-let userAnswers: Record<string, string> = {};
+let userAnswers: Record<string, string> | undefined = undefined;
 
 const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager: ConnectionManager): Promise<PermissionResult> => {
   connectionManager.broadcast({ type: "ask_user_question", data: input })
 
   waitForUserAnswers = true;
   while(waitForUserAnswers) {
-    if(userAnswers) {
+    if(userAnswers !== undefined) {
       console.log('User answers', userAnswers);
       return {
         behavior: "allow",
@@ -66,8 +66,6 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
     }
     await new Promise(resolve => setTimeout(resolve, 10));
   }
-
-  console.log('No user answers', userAnswers);
 
   return {
     behavior: "allow",
