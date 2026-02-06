@@ -47,11 +47,6 @@ export function isAgentStillActive() {
   return agentIsActive;
 }
 
-const abortController = new AbortController
-export function getAbortController(): AbortController {
-  return abortController;
-}
-
 const AGENT_OPTIONS: Options = {
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
@@ -74,7 +69,6 @@ const AGENT_OPTIONS: Options = {
     }
   },
   resume: sessionId, // Resume with a previous Claude session ID
-  abortController: abortController
 } as const;
 
 let shouldContinueConversation = false;

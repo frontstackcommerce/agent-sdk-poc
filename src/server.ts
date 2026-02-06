@@ -66,12 +66,6 @@ const port = 8080;
 
 app.use(express.json())
 
-app.delete("/abort", (req, res) => {
-  //getAbortController().abort("Aborted by user");
-
-  res.status(501).json({ success: false });
-});
-
 const server = createServer(app);
 
 const wss = new WebSocketServer({
