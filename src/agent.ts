@@ -1,6 +1,6 @@
 import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
-import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage } from "./server";
+import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage, UserQuestionAnswer } from "./server";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -47,7 +47,7 @@ export function isAgentStillActive() {
 }
 
 let waitForUserAnswers: boolean = false;
-let userAnswers: AskUserQuestionInput['answers'] = undefined;
+let userAnswers: UserQuestionAnswer | undefined = undefined;
 
 const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager: ConnectionManager): Promise<PermissionResult> => {
   connectionManager.broadcast({ type: "ask_user_question", data: input })
@@ -121,7 +121,7 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         
         console.log('Message', message);
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
-          userAnswers = message.data.answers;
+          userAnswers = message.data;
           connectionManager.broadcast(message);
           waitForUserAnswers = false;
           continue;

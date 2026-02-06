@@ -12,17 +12,20 @@ type ProtocolError = {
   error: string,
 };
 
-export type AskUserQuestionInput = {
-  questions: {
-    question: string
-    header: string
-    options: {
-      label: string
-      description: string
-    }[]
-    multiSelect: boolean
+export type UserQuestion = {
+  question: string
+  header: string
+  options: {
+    label: string
+    description: string
   }[]
-  answers?: Record<string, string>
+  multiSelect: boolean
+}
+
+export type UserQuestionAnswer = Record<string, string>
+
+export type AskUserQuestionInput = {
+  questions: UserQuestion[]
 }
 
 export type AskUserQuestionRequest = {
@@ -32,7 +35,7 @@ export type AskUserQuestionRequest = {
 
 export type AskUserQuestionResponse = {
   type: "ask_user_question_response"
-  data: AskUserQuestionInput
+  data: UserQuestionAnswer
 }
 
 export type FronticUserMessage = {
@@ -95,7 +98,6 @@ async function handleNewMessage(
   try {
     input = JSON.parse(message.toString());
 
-    console.log('Input', JSON.stringify(input, null, 2));
     // Basic validation
     if(typeof input !== 'object' || !Object.keys(input).includes('type')) {
       throw new Error('Invalid payload');
