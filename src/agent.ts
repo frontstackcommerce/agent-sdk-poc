@@ -55,6 +55,7 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
   waitForUserAnswers = true;
   while(waitForUserAnswers) {
     if(userAnswers) {
+      console.log('User answers', userAnswers);
       return {
         behavior: "allow",
         updatedInput: {
@@ -65,6 +66,8 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
     }
     await new Promise(resolve => setTimeout(resolve, 10));
   }
+
+  console.log('No user answers', userAnswers);
 
   return {
     behavior: "allow",
