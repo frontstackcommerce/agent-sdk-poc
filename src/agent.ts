@@ -2,8 +2,6 @@ import { query, Options, SDKUserMessage, SDKMessage, HookCallback, McpServerConf
 import path from "node:path";
 import { ConnectionManager } from "./server";
 
-console.log(process.env)
-
 export type Configuration = {
   agents: Record<string, AgentDefinition>
   /**
@@ -110,9 +108,6 @@ export const runAgent = async (userPrompt: string, connectionManager: Connection
       continue: shouldContinueConversation,
     },
   })) {
-    if (message.type === "system" && message.subtype === "init") {
-      console.log("Available MCP tools:", message.mcp_servers);
-    }
     connectionManager.broadcast(message);
   }
 
