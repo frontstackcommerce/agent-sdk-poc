@@ -1,6 +1,6 @@
-import { query, Options, SDKUserMessage, SDKMessage, HookCallback, McpServerConfig, AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
+import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
-import { ConnectionManager } from "./server";
+import { ConnectionManager, messages } from "./server";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -79,71 +79,56 @@ const AGENT_OPTIONS: Options = {
 
 let shouldContinueConversation = false;
 
-export const runAgent = async (userPrompt: string, connectionManager: ConnectionManager, configuration: Configuration) => {
-  const userMessage: SDKUserMessage = {
-    type: "user",
-    message: {
-      role: "user",
-      content: [{
-        type: "text",
-        text: userPrompt,
-      }],
-    },
-    parent_tool_use_id: null,
-    session_id: ""
-  };
+export let activeStream: undefined|Query = undefined;
+export function isInitialized(): boolean {
+  return activeStream !== undefined;
+}
 
+export const runAgent = async (connectionManager: ConnectionManager, configuration: Configuration) => {
   // Required because we"re using complex prompt objects instead of strings
-  const userMessageIterable = async function* () {
-    yield userMessage;
+  const userMessageIterable = async function* (messages: string[]): AsyncIterable<SDKUserMessage> {
+    while (true) {
+      while (messages.length > 0) {
+        const message = messages.shift();
+        if (message === undefined) {
+          continue;
+        }
+
+        const userMessage: SDKUserMessage = {
+          type: "user",
+          message: {
+            role: "user",
+            content: [{
+              type: "text",
+              text: message,
+            }],
+          },
+          parent_tool_use_id: null,
+          session_id: ""
+        };
+
+        connectionManager.broadcast(userMessage);
+
+        yield userMessage!;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
   }
 
   // Agentic loop: streams messages as Claude works for this single user turn.
   // On subsequent turns, `continue: true` keeps the same conversation.
-  for await (const message of query({
-    prompt: userMessageIterable(),
+  activeStream = query({
+    prompt: userMessageIterable(messages),
     options: {
       ...AGENT_OPTIONS,
       ...configuration,
       continue: shouldContinueConversation,
     },
-  })) {
+  });
+  for await (const message of activeStream) {
     connectionManager.broadcast(message);
   }
 
   shouldContinueConversation = true;
-}
-
-function printPriceSummary(message: SDKMessage) {
-  if (message.type !== "result") return;
-  if (!message.total_cost_usd && !message.modelUsage) return;
-
-  console.log("\n💰 Price Summary:");
-
-  // Total tokens and cost
-  if (message.usage) {
-    const totalInput = (message.usage.input_tokens || 0) +
-      (message.usage.cache_creation_input_tokens || 0) +
-      (message.usage.cache_read_input_tokens || 0);
-    const totalOutput = message.usage.output_tokens || 0;
-    console.log(`   Tokens: ${totalInput.toLocaleString()} in / ${totalOutput.toLocaleString()} out`);
-  }
-
-  if (message.total_cost_usd !== undefined) {
-    console.log(`   Total: $${message.total_cost_usd.toFixed(4)}`);
-  }
-
-  // Per-model breakdown
-  if (message.modelUsage) {
-    console.log("\n   Model breakdown:");
-    for (const [model, usage] of Object.entries(message.modelUsage)) {
-      const modelName = model.replace("claude-", "").replace(/\d{8}$/, "").trim();
-      const inTokens = (usage.inputTokens || 0) + (usage.cacheCreationInputTokens || 0);
-      const outTokens = usage.outputTokens || 0;
-      const cacheRead = usage.cacheReadInputTokens || 0;
-
-      console.log(`   • ${modelName}: ${inTokens.toLocaleString()} in${cacheRead > 0 ? ` (+${cacheRead.toLocaleString()} cache)` : ""} / ${outTokens.toLocaleString()} out → $${usage.costUSD.toFixed(4)}`);
-    }
-  }
-  console.log(); // Empty line after summary
 }

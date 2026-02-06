@@ -4,7 +4,7 @@ import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
-import { type Configuration, getTranscriptPath, isAgentStillActive, runAgent } from "./agent";
+import { activeStream, getTranscriptPath, isInitialized, runAgent } from "./agent";
 import { fetchMessages } from "./history";
 
 export class ConnectionManager {
@@ -39,42 +39,32 @@ export class ConnectionManager {
   }
 }
 
+export const messages: string[] = [];
+async function handleNewMessage(
+  message: ws.RawData,
+) {
+  // TODO: Message schema validation
+
+  const input = JSON.parse(message.toString());
+  if (input.type === 'initialize' && !isInitialized()) {
+    runAgent(connectionManager, input.data);
+  } else if (input.type === 'user_message') {
+    if (!isInitialized()) {
+      // TODO: Notify error
+    } else {
+      messages.push(input.data);
+    }
+  } else if (input.type === 'interrupt') {
+    activeStream?.interrupt();
+  }
+}
+
 const connectionManager = new ConnectionManager();
 
 const app = express();
 const port = 8080;
 
 app.use(express.json())
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-/**
- * Handles user messages and writes them to the stream
- */
-app.post("/chat", (req, res) => {
-  const userMessage = req.body.message;
-  if (!userMessage) {
-    return res.status(400).json({ success: false, error: "message is required" });
-  }
-
-  if (isAgentStillActive()) {
-      res.status(409).json({ success: false, error: 'Agent is blocked' })
-      return;
-  }
-
-  const configuration: Configuration = req.body.configuration ?? {};
-
-  try {
-    runAgent(userMessage, connectionManager, configuration);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error running agent:", error);
-    res.status(500).json({ success: false, error: "Failed to process message", details: error });
-  }
-
-});
 
 app.delete("/abort", (req, res) => {
   //getAbortController().abort("Aborted by user");
@@ -97,6 +87,10 @@ wss.on("connection", async function connection(ws) {
   for await (const message of history) {
     ws.send(message);
   }
+
+  ws.on("message", function (data: ws.RawData) {
+    handleNewMessage(data);
+  });
 
   ws.on("close", function close() {
     connectionManager.removeClient(ws);
