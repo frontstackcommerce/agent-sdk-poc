@@ -2,7 +2,7 @@ import path from "node:path";
 import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage, UserQuestionAnswer } from "./server";
 import { ContentBlockParam } from "@anthropic-ai/sdk/resources";
-import { getSessionId, saveSessionInfo } from "./session";
+import { getSessionId, getTranscriptPath as getSavedTranscriptPath, saveSessionInfo } from "./session";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -12,7 +12,7 @@ export type Configuration = {
 };
 
 let sessionId = getSessionId();
-let transcriptPath = getTranscriptPath();
+let transcriptPath = getSavedTranscriptPath();
 let agentIsActive = false;
 
 const userPromptSubmitHook: HookCallback = async (input) => {
