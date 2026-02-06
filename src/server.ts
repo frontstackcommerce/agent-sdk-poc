@@ -40,7 +40,10 @@ export type AskUserQuestionResponse = {
 
 export type FronticUserMessage = {
   type: "user_message"
-  data: string
+  data: {
+    message: string,
+    images: string[] // List of Base64-encoded strings
+  }
 }
 
 export type FronticInitializeMessage = {

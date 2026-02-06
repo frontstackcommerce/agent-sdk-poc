@@ -1,6 +1,7 @@
 import path from "node:path";
 import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage, UserQuestionAnswer } from "./server";
+import { ContentBlockParam } from "@anthropic-ai/sdk/resources";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -105,7 +106,7 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         if (message === undefined) {
           continue;
         }
-        
+
         // Handle user question responses
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
           userAnswers = message.data;
@@ -124,12 +125,23 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
             role: "user",
             content: [{
               type: "text",
-              text: message.data,
+              text: message.data.message,
             }],
           },
           parent_tool_use_id: null,
           session_id: ""
         };
+
+        for (const image of message.data.images) {
+          (userMessage.message.content as ContentBlockParam[]).push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/png',
+              data: image
+            }
+          })
+        }
 
         connectionManager.broadcast(userMessage);
 
