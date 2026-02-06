@@ -56,6 +56,7 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
   while(waitForUserAnswers) {
     if(userAnswers) {
       console.log('User answers', userAnswers);
+      waitForUserAnswers = false;
       return {
         behavior: "allow",
         updatedInput: {
@@ -123,7 +124,6 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
           userAnswers = message.data;
           connectionManager.broadcast(message);
-          waitForUserAnswers = false;
           continue;
         }
 
