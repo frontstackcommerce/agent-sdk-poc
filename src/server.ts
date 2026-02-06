@@ -95,12 +95,12 @@ async function handleNewMessage(
   try {
     input = JSON.parse(message.toString());
 
+    console.log('Input', JSON.stringify(input, null, 2));
     // Basic validation
     if(typeof input !== 'object' || !Object.keys(input).includes('type')) {
       throw new Error('Invalid payload');
     }
   } catch {
-    console.error('Invalid payload', message);
     connectionManager.broadcast({ type: "error", error: "Invalid payload" })
     return;
   }
