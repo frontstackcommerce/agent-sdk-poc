@@ -54,7 +54,7 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
 
   waitForUserAnswers = true;
   while(waitForUserAnswers) {
-    if(userAnswers !== undefined) {
+    if(userAnswers) {
       console.log('User answers', userAnswers);
       return {
         behavior: "allow",
@@ -118,7 +118,8 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         if (message === undefined) {
           continue;
         }
-
+        
+        console.log('Message Type', message.type);
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
           userAnswers = message as any as Record<string, string>;
           connectionManager.broadcast(message);
