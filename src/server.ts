@@ -4,7 +4,7 @@ import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import express from "express";
 import { createServer } from "http";
 import ws, { WebSocketServer } from "ws";
-import { activeStream, getTranscriptPath, isInitialized, runAgent } from "./agent";
+import { activeStream, Configuration, getTranscriptPath, isInitialized, runAgent } from "./agent";
 import { fetchMessages } from "./history";
 
 type ProtocolError = {
@@ -30,6 +30,27 @@ export type AskUserQuestionRequest = {
   data: AskUserQuestionInput
 }
 
+export type AskUserQuestionResponse = {
+  type: "ask_user_question_response"
+  data: AskUserQuestionInput
+}
+
+export type FronticUserMessage = {
+  type: "user_message"
+  data: string
+}
+
+export type FronticInitializeMessage = {
+  type: "initialize"
+  data: Configuration
+}
+
+export type FronticInterruptMessage = {
+  type: "interrupt"
+}
+
+export type FronticMessage = FronticInitializeMessage | FronticUserMessage | AskUserQuestionRequest | AskUserQuestionResponse | FronticInterruptMessage;
+
 export class ConnectionManager {
   private clients: Set<ws>;
 
@@ -45,7 +66,7 @@ export class ConnectionManager {
     this.clients.delete(ws);
   }
 
-  broadcast(message: SDKMessage | ProtocolError | AskUserQuestionRequest, sender: ws | null = null) {
+  broadcast(message: SDKMessage | ProtocolError | AskUserQuestionRequest | AskUserQuestionResponse, sender: ws | null = null) {
     this.clients.forEach(client => {
       if (client !== sender && client.readyState === client.OPEN) {
         try {
@@ -62,16 +83,22 @@ export class ConnectionManager {
   }
 }
 
-export const messages: string[] = [];
+export const messages: FronticMessage[] = [];
+
 async function handleNewMessage(
   message: ws.RawData,
 ) {
   // TODO: Message schema validation
   // TODO: Receive image attachments in prompt
 
-  let input = undefined;
+  let input: FronticMessage|undefined = undefined;
   try {
     input = JSON.parse(message.toString());
+
+    // Basic validation
+    if(typeof input !== 'object' || !Object.keys(input).includes('type')) {
+      throw new Error('Invalid payload');
+    }
   } catch {
     connectionManager.broadcast({ type: "error", error: "Invalid payload" })
     return;
@@ -79,12 +106,12 @@ async function handleNewMessage(
 
   if (input.type === 'initialize' && !isInitialized()) {
     runAgent(connectionManager, input.data);
-  } else if (input.type === 'user_message') {
+  } else if (input.type === 'user_message' || input.type === 'ask_user_question_response') {
     if (!isInitialized()) {
       // TODO: Notify error
       connectionManager.broadcast({ type: "error", error: "Agent must be initialized before use" })
     } else {
-      messages.push(input.data);
+      messages.push(input);
     }
   } else if (input.type === 'interrupt') {
     activeStream?.interrupt();

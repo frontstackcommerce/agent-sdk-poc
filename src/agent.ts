@@ -1,6 +1,6 @@
 import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
-import { ConnectionManager, messages, connectionManager, AskUserQuestionInput } from "./server";
+import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage } from "./server";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -47,7 +47,7 @@ export function isAgentStillActive() {
 }
 
 let waitForUserAnswers: boolean = false;
-let userAnswers: Record<string, string> | undefined = undefined;
+let userAnswers: AskUserQuestionInput['answers'] = undefined;
 
 const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager: ConnectionManager): Promise<PermissionResult> => {
   connectionManager.broadcast({ type: "ask_user_question", data: input })
@@ -111,7 +111,7 @@ export function isInitialized(): boolean {
 
 export const runAgent = async (connectionManager: ConnectionManager, configuration: Configuration) => {
   // Required because we"re using complex prompt objects instead of strings
-  const userMessageIterable = async function* (messages: string[]): AsyncIterable<SDKUserMessage> {
+  const userMessageIterable = async function* (messages: FronticMessage[]): AsyncIterable<SDKUserMessage> {
     while (true) {
       while (messages.length > 0) {
         const message = messages.shift();
@@ -121,9 +121,14 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
         
         console.log('Message', message);
         if(waitForUserAnswers && message.type === "ask_user_question_response") {
-          userAnswers = message as any as Record<string, string>;
+          userAnswers = message.data.answers;
           connectionManager.broadcast(message);
           waitForUserAnswers = false;
+          continue;
+        }
+
+        // Only return user messages
+        if(message.type !== "user_message") {
           continue;
         }
 
@@ -133,7 +138,7 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
             role: "user",
             content: [{
               type: "text",
-              text: message,
+              text: message.data,
             }],
           },
           parent_tool_use_id: null,
