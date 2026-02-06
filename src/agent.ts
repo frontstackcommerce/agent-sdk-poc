@@ -2,6 +2,7 @@ import path from "node:path";
 import { query, Options, SDKUserMessage, HookCallback, McpServerConfig, AgentDefinition, Query, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { ConnectionManager, messages, connectionManager, AskUserQuestionInput, FronticMessage, UserQuestionAnswer } from "./server";
 import { ContentBlockParam } from "@anthropic-ai/sdk/resources";
+import { getSessionId, saveSessionInfo } from "./session";
 
 export type Configuration = {
   agents: Record<string, AgentDefinition>
@@ -10,13 +11,16 @@ export type Configuration = {
   systemPrompt?: string
 };
 
-let sessionId = "";
-let transcriptPath = "";
+let sessionId = getSessionId();
+let transcriptPath = getTranscriptPath();
 let agentIsActive = false;
 
 const userPromptSubmitHook: HookCallback = async (input) => {
   sessionId = input.session_id;
   transcriptPath = input.transcript_path;
+
+  saveSessionInfo(sessionId, transcriptPath)
+
   agentIsActive = true;
   return {};
 }
@@ -76,8 +80,10 @@ const AGENT_OPTIONS: Options = {
       hooks: [stopHook],
     }]
   },
-  cwd: path.join(import.meta.dirname, "..", "..", "app"),
-  additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
+  //cwd: path.join(import.meta.dirname, "..", "..", "app"),
+  //additionalDirectories: [path.join(import.meta.dirname, "..", "..", "app")],
+  cwd: path.join(import.meta.dirname, "..", "workdir"),
+  additionalDirectories: [path.join(import.meta.dirname, "..", "workdir")],
   canUseTool: async (toolName, input) => {
     if(toolName === 'AskUserQuestion') {
       return await handleUserQuestion(input as AskUserQuestionInput, connectionManager);
