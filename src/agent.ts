@@ -50,11 +50,13 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
   while(waitForUserAnswers) {
     if(userAnswers) {
       waitForUserAnswers = false;
+      const answers = userAnswers;
+      userAnswers = undefined;
       return {
         behavior: "allow",
         updatedInput: {
           ...input,
-          answers: userAnswers,
+          answers: answers,
         },
       }
     }
