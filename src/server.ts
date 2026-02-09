@@ -48,7 +48,9 @@ export type FronticUserMessage = {
 
 export type FronticInitializeMessage = {
   type: "initialize"
-  data: Configuration
+  data: {
+    configuration: Configuration
+  }
 }
 
 export type FronticInterruptMessage = {
@@ -111,7 +113,7 @@ async function handleNewMessage(
   }
 
   if (input.type === 'initialize' && !isInitialized()) {
-    runAgent(connectionManager, input.data);
+    runAgent(connectionManager, input.data.configuration);
   } else if (input.type === 'user_message' || input.type === 'ask_user_question_response') {
     if (!isInitialized()) {
       // TODO: Notify error
