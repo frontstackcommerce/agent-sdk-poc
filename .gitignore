@@ -1,5 +1,6 @@
 /workdir/
 /node_modules/
+/src/agent-session.json
 
 .env
 .DS_Store
