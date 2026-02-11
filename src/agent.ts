@@ -73,7 +73,7 @@ const AGENT_OPTIONS: Options = {
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
   includePartialMessages: true, // Enable streaming of partial messages for real-time output
-  settingSources: ["user"],
+  settingSources: ["project"],
   hooks: {
     UserPromptSubmit: [{
       hooks: [userPromptSubmitHook],
