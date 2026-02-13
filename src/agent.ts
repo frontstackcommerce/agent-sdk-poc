@@ -91,13 +91,13 @@ const AGENT_OPTIONS: Options = {
     if(toolName === 'AskUserQuestion') {
       return await handleUserQuestion(input as AskUserQuestionInput, connectionManager);
     }
+
     return {
       behavior: "allow",
       updatedInput: input
     }
   },
-  resume: sessionId, // Resume with a previous Claude session ID
-} as const;
+};
 
 let shouldContinueConversation = false;
 
@@ -179,6 +179,7 @@ export const runAgent = async (connectionManager: ConnectionManager, configurati
       ...AGENT_OPTIONS,
       ...configuration,
       continue: shouldContinueConversation,
+      resume: sessionId,
     },
   });
   for await (const message of activeStream) {
