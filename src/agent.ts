@@ -70,6 +70,9 @@ const handleUserQuestion = async (input: AskUserQuestionInput, connectionManager
 }
 
 const AGENT_OPTIONS: Options = {
+  stderr(data) {
+    console.error("Agent stderr:", data);
+  },
   permissionMode: "acceptEdits", // plan = creates a plan file, acceptEdits = accepts the edits and returns the result
   model: "sonnet",
   includePartialMessages: true, // Enable streaming of partial messages for real-time output
